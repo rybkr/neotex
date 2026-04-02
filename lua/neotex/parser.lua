@@ -1,40 +1,43 @@
-local config = require("neotex.config")
-local logger = require("neotex.logger")
-local futils = require("neotex.futils")
+local utils = require("neotex.utils")
 
+local M = {}
 
-local Parser = {}
+local function collect_matches(path, matcher)
+    local matches = {}
 
-local function is_error(line)
-    return line:match("^!")
-end
-
-local function is_warning(file)
-    return line:match("Warning:")
-end
-
-local function is_overfull(file)
-    return line:match("Overfull %\\hbox")
-end
-
-Parser.parse_log = function(filename)
-    --[[
-    local errors = {}
-    local warnings = {}
-    local overfulls = {}
-
-    if not futils.assert_file_exists(filename .. ".log") then
-        return errors, warnings, overfulls
+    if not utils.file_exists(path) then
+        return matches
     end
 
-    for line in io.lines(log_file) do
-        if is_error(line) then table.insert(errors, line) end
-        if is_warning(line) then table.insert(warnings, line) end
-        if is_overfull(line) then table.insert(overfulls, line) end
+    for line in io.lines(path) do
+        if matcher(line) then
+            table.insert(matches, vim.trim(line))
+        end
     end
 
-    return errors, warnings, overfulls
-    --]]
+    return matches
 end
 
-return Parser
+function M.parse_log(path)
+    if not utils.file_exists(path) then
+        return {
+            errors = {},
+            warnings = {},
+            overfull = {},
+        }
+    end
+
+    return {
+        errors = collect_matches(path, function(line)
+            return line:match("^!")
+        end),
+        warnings = collect_matches(path, function(line)
+            return line:match("Warning:")
+        end),
+        overfull = collect_matches(path, function(line)
+            return line:match("Overfull %\\hbox") or line:match("Underfull %\\hbox")
+        end),
+    }
+end
+
+return M

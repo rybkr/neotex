@@ -3,50 +3,54 @@ local pdfviewer = require("neotex.pdfviewer")
 local snippets = require("neotex.snippets")
 
 
-local Mapping = {}
+local M = {}
 
 local keymap = vim.keymap
 
-Mapping.setup = function()
-    keymap.set('n', '<leader>lc', function()
-        compiler.compile(vim.fn.expand("%:t:r"))
+function M.setup()
+    snippets.setup()
+
+    keymap.set("n", "<leader>lc", function()
+        compiler.compile()
     end, { noremap = true, silent = true, desc = "Compile LaTeX" })
 
-    keymap.set('n', '<leader>lo', function()
-        pdfviewer.view_pdf(vim.fn.expand("%:t:r"))
+    keymap.set("n", "<leader>lo", function()
+        pdfviewer.view_pdf()
     end, { noremap = true, silent = true, desc = "Open PDF" })
 
-    keymap.set('n', '<leader>lp', function()
-        compiler.compile(vim.fn.expand("%:t:r"), function()
-            if not compiler.did_compile() then return end
-            pdfviewer.view_pdf(vim.fn.expand("%:t:r")) -- only open the PDF if compilation succeeded
+    keymap.set("n", "<leader>lp", function()
+        compiler.compile(nil, function(did_compile)
+            if not did_compile then
+                return
+            end
+
+            pdfviewer.view_pdf()
         end)
     end, { noremap = true, silent = true, desc = "Compile LaTeX and open PDF" })
 
-    keymap.set('n', '<leader>ll', function()
-        compiler.toggle_liveliness(vim.fn.expand("%:t:r"))
-    end, { noremap = true, silent = true, desc = "Toggle LaTeX live compilaion" })
+    keymap.set("n", "<leader>ll", function()
+        compiler.toggle_live()
+    end, { noremap = true, silent = true, desc = "Toggle live LaTeX compilation" })
 
-    keymap.set('n', '<leader>lj', function()
-        pdfviewer.pdf_jump(vim.fn.expand("%:t:r"))
-    end, { noremap = true, silent = true, desc = "From TeX, jump to corresponding point in PDF" })
+    keymap.set("n", "<leader>lj", function()
+        pdfviewer.forward_search()
+    end, { noremap = true, silent = true, desc = "Jump from TeX to PDF" })
 
-    keymap.set('i', '<Tab>',
-        "<cmd>lua require('luasnip').expand_or_jump()<CR>",
-    { noremap = true, silent = true })
+    local has_luasnip = pcall(require, "luasnip")
+    if not has_luasnip then
+        return
+    end
 
-    keymap.set('s', '<Tab>',
+    keymap.set("i", "<Tab>", "<cmd>lua require('luasnip').expand_or_jump()<CR>", { noremap = true, silent = true })
+    keymap.set("s", "<Tab>",
         "<cmd>lua require'luasnip'.jump(1)<CR>",
-    { noremap = true, silent = true })
-
-    keymap.set('i', '<S-Tab>',
+        { noremap = true, silent = true })
+    keymap.set("i", "<S-Tab>",
         "<cmd>lua require'luasnip'.jump(-1)<CR>",
-    { noremap = true, silent = true })
-
-    keymap.set('s', '<S-Tab>',
+        { noremap = true, silent = true })
+    keymap.set("s", "<S-Tab>",
         "<cmd>lua require'luasnip'.jump(-1)<CR>",
-    { noremap = true, silent = true })
+        { noremap = true, silent = true })
 end
 
-
-return Mapping
+return M

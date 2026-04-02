@@ -1,45 +1,46 @@
 local config = require("neotex.config")
 
+local M = {}
 
-Logger = {}
-Logger.__index = Logger
-
-Logger.levels =
-{
-    DEBUG = 1,
-    INFO = 2,
-    WARN = 3,
-    ERROR = 4,
+local titles = {
+    [vim.log.levels.DEBUG] = "Debug",
+    [vim.log.levels.INFO] = "Info",
+    [vim.log.levels.WARN] = "Warning",
+    [vim.log.levels.ERROR] = "Error",
 }
 
-Logger.log = function(level, message)
-    if level < config.log_level then
+local function should_log(level)
+    return level >= (config.get().log_level or vim.log.levels.INFO)
+end
+
+function M.log(level, message, opts)
+    if not should_log(level) then
         return
     end
 
-    local styles = { vim.log.levels.INFO, vim.log.levels.INFO, vim.log.levels.WARN, vim.log.levels.ERROR }
-    local prefixes = { "Debug: ", "", "Warning: ", "Error: " }
-
-    vim.api.nvim_notify(
-        "(neotex) " .. prefixes[level] .. message,
-    styles[level], {})
+    vim.notify(message, level, vim.tbl_extend("force", {
+        title = "neotex",
+    }, opts or {}))
 end
 
-Logger.error = function(message)
-    Logger.log(Logger.levels.ERROR, message)
+function M.debug(message, opts)
+    M.log(vim.log.levels.DEBUG, message, opts)
 end
 
-Logger.warn = function(message)
-    Logger.log(Logger.levels.WARN, message)
+function M.info(message, opts)
+    M.log(vim.log.levels.INFO, message, opts)
 end
 
-Logger.info = function(message)
-    Logger.log(Logger.levels.INFO, message)
+function M.warn(message, opts)
+    M.log(vim.log.levels.WARN, message, opts)
 end
 
-Logger.debug = function(message)
-    Logger.log(Logger.levels.DEBUG, message)
+function M.error(message, opts)
+    M.log(vim.log.levels.ERROR, message, opts)
 end
 
+function M.level_name(level)
+    return titles[level] or "Log"
+end
 
-return Logger
+return M

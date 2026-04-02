@@ -1,11 +1,18 @@
 local config = require("neotex.config")
+local commands = require("neotex.commands")
 local keymaps = require("neotex.keymaps")
 
-local function setup(usr_config)
-    config = vim.tbl_deep_extend("force", config, usr_config or {})
+local M = {}
+
+function M.setup(user_config)
+    config.setup(user_config)
+    commands.setup()
     keymaps.setup()
 
-    local luasnip = require("luasnip")
+    local ok, luasnip = pcall(require, "luasnip")
+    if not ok then
+        return
+    end
 
     luasnip.config.set_config({
         history = true,
@@ -14,6 +21,4 @@ local function setup(usr_config)
     })
 end
 
-return {
-    setup = setup,
-}
+return M
