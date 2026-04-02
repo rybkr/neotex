@@ -4,23 +4,16 @@ local utils = require("neotex.utils")
 
 local M = {}
 
-local function viewer_command()
-    return config.get().pdf_viewer
-end
+local function viewer_command() return config.get().pdf_viewer end
 
-local function is_zathura()
-    return viewer_command() == "zathura"
-end
+local function is_zathura() return viewer_command() == "zathura" end
 
 local function pdf_is_open(pdf_path)
-    if not is_zathura() then
-        return false
-    end
+    if not is_zathura() then return false end
 
-    local handle = io.popen("pgrep -f " .. vim.fn.shellescape("zathura.*" .. pdf_path))
-    if not handle then
-        return false
-    end
+    local handle = io.popen("pgrep -f " ..
+                                vim.fn.shellescape("zathura.*" .. pdf_path))
+    if not handle then return false end
 
     local result = handle:read("*a")
     handle:close()
@@ -28,17 +21,13 @@ local function pdf_is_open(pdf_path)
 end
 
 local function build_open_command(ctx)
-    local cmd = { viewer_command() }
+    local cmd = {viewer_command()}
 
     if is_zathura() and vim.v.servername ~= "" then
         table.insert(cmd, "--synctex-editor-command")
-        table.insert(
-            cmd,
-            string.format(
-                [[nvim --server %s --remote-send <Cmd>lua require('neotex.commands').jump_to(%%l, [=[%%f]=])<CR>]],
-                vim.v.servername
-            )
-        )
+        table.insert(cmd, string.format(
+                         [[nvim --server %s --remote-send <Cmd>lua require('neotex.commands').jump_to(%%l, [=[%%f]=])<CR>]],
+                         vim.v.servername))
     end
 
     table.insert(cmd, ctx.pdf)
@@ -56,7 +45,7 @@ function M.open_pdf(target)
         return false
     end
 
-    local job_id = vim.fn.jobstart(build_open_command(ctx), { detach = true })
+    local job_id = vim.fn.jobstart(build_open_command(ctx), {detach = true})
     if job_id <= 0 then
         logger.error("Failed to launch PDF viewer.")
         return false
@@ -77,9 +66,7 @@ function M.view_pdf(target)
         return false
     end
 
-    if pdf_is_open(ctx.pdf) then
-        return true
-    end
+    if pdf_is_open(ctx.pdf) then return true end
 
     return M.open_pdf(ctx.source)
 end
@@ -100,18 +87,15 @@ function M.forward_search(target)
         return false
     end
 
-    if not utils.ensure_dbus() then
-        return false
-    end
+    if not utils.ensure_dbus() then return false end
 
     local cmd = {
-        viewer_command(),
-        "--synctex-forward",
+        viewer_command(), "--synctex-forward",
         string.format("%d:%d:%s", vim.fn.line("."), vim.fn.col("."), ctx.source),
-        ctx.pdf,
+        ctx.pdf
     }
 
-    local job_id = vim.fn.jobstart(cmd, { detach = true })
+    local job_id = vim.fn.jobstart(cmd, {detach = true})
     if job_id <= 0 then
         logger.error("Failed to execute SyncTeX forward search.")
         return false

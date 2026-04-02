@@ -6,7 +6,7 @@ local utils = require("neotex.utils")
 local M = {}
 local uv = vim.uv or vim.loop
 
-local GROUP = vim.api.nvim_create_augroup("neotex_live_compile", { clear = true })
+local GROUP = vim.api.nvim_create_augroup("neotex_live_compile", {clear = true})
 
 local state = {
     active_job = nil,
@@ -15,13 +15,11 @@ local state = {
     live_enabled = false,
     live_target = nil,
     live_bufnr = nil,
-    debounce_timer = nil,
+    debounce_timer = nil
 }
 
 local function stop_timer()
-    if not state.debounce_timer then
-        return
-    end
+    if not state.debounce_timer then return end
 
     state.debounce_timer:stop()
     state.debounce_timer:close()
@@ -39,35 +37,25 @@ local function summarize_log(result)
 end
 
 local function run_pending_compile()
-    if not state.pending_target then
-        return
-    end
+    if not state.pending_target then return end
 
     local target = state.pending_target
     state.pending_target = nil
-    vim.schedule(function()
-        M.compile(target)
-    end)
+    vim.schedule(function() M.compile(target) end)
 end
 
-function M.is_live()
-    return state.live_enabled
-end
+function M.is_live() return state.live_enabled end
 
 function M.compile(target, on_complete)
     local ctx = utils.resolve_tex_context(target)
-    if not ctx then
-        return false
-    end
+    if not ctx then return false end
 
     local latex_cmd = config.get().latex_cmd
     if not utils.assert_executable(latex_cmd, "LaTeX compiler") then
         return false
     end
 
-    if not utils.ensure_dir(ctx.build_dir) then
-        return false
-    end
+    if not utils.ensure_dir(ctx.build_dir) then return false end
 
     if state.active_job then
         state.pending_target = ctx.source
@@ -79,13 +67,9 @@ function M.compile(target, on_complete)
     local stdout = {}
     local stderr = {}
     local cmd = {
-        latex_cmd,
-        "-interaction=nonstopmode",
-        "-halt-on-error",
-        "-file-line-error",
-        "-synctex=1",
-        "-output-directory=" .. ctx.build_dir,
-        ctx.source,
+        latex_cmd, "-interaction=nonstopmode", "-halt-on-error",
+        "-file-line-error", "-synctex=1", "-output-directory=" .. ctx.build_dir,
+        ctx.source
     }
 
     state.active_job = vim.fn.jobstart(cmd, {
@@ -93,14 +77,10 @@ function M.compile(target, on_complete)
         stdout_buffered = true,
         stderr_buffered = true,
         on_stdout = function(_, data)
-            if data then
-                vim.list_extend(stdout, data)
-            end
+            if data then vim.list_extend(stdout, data) end
         end,
         on_stderr = function(_, data)
-            if data then
-                vim.list_extend(stderr, data)
-            end
+            if data then vim.list_extend(stderr, data) end
         end,
         on_exit = function(_, code)
             state.active_job = nil
@@ -110,7 +90,8 @@ function M.compile(target, on_complete)
             state.last_compile_ok = did_compile
 
             if did_compile then
-                logger.info("LaTeX compilation successful: " .. vim.fn.fnamemodify(ctx.pdf, ":t"))
+                logger.info("LaTeX compilation successful: " ..
+                                vim.fn.fnamemodify(ctx.pdf, ":t"))
                 if #log_result.warnings > 0 or #log_result.overfull > 0 then
                     summarize_log(log_result)
                 end
@@ -132,7 +113,7 @@ function M.compile(target, on_complete)
             end
 
             run_pending_compile()
-        end,
+        end
     })
 
     if state.active_job <= 0 then
@@ -146,28 +127,29 @@ end
 
 function M.enable_live(target)
     local ctx = utils.resolve_tex_context(target)
-    if not ctx then
-        return false
-    end
+    if not ctx then return false end
 
     local bufnr = vim.api.nvim_get_current_buf()
     stop_timer()
-    vim.api.nvim_clear_autocmds({ group = GROUP })
+    vim.api.nvim_clear_autocmds({group = GROUP})
 
     state.live_enabled = true
     state.live_target = ctx.source
     state.live_bufnr = bufnr
 
-    vim.api.nvim_create_autocmd({ "BufWritePost", "TextChanged", "TextChangedI" }, {
+    vim.api.nvim_create_autocmd({"BufWritePost", "TextChanged", "TextChangedI"},
+                                {
         group = GROUP,
         buffer = bufnr,
         callback = function()
             stop_timer()
             state.debounce_timer = uv.new_timer()
-            state.debounce_timer:start(config.get().debounce_ms, 0, vim.schedule_wrap(function()
-                M.compile(state.live_target)
-            end))
-        end,
+            state.debounce_timer:start(config.get().debounce_ms, 0,
+                                       vim.schedule_wrap(
+                                           function()
+                    M.compile(state.live_target)
+                end))
+        end
     })
 
     logger.info("Live compilation enabled.")
@@ -175,7 +157,7 @@ function M.enable_live(target)
 end
 
 function M.disable_live()
-    vim.api.nvim_clear_autocmds({ group = GROUP })
+    vim.api.nvim_clear_autocmds({group = GROUP})
     stop_timer()
 
     state.live_enabled = false
